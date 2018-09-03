@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<canvas id="myCanvas" width="1600" height="7000" style="background-color: #2B2B2B;">
+    Your browser does not support the canvas element.
+</canvas>
+
+</body>
+</html>
+<script>
+    const MO = "Mo";
+    const TU = "Tu";
+    const WE = "We";
+    const TH = "Th";
+    const FR = "Fr";
+    const SA = "Sa";
+    const SU = "Su";
+
+    function radian(r) {
+        return r * Math.PI;
+    }
+
+    const ctx = document.getElementById("myCanvas").getContext("2d");
+    const margin = 50;
+    const radius = 240;
+    const lineWidth = 80;
+    const daysOfWeekRadius = radius - 0.9 * lineWidth;
+    const daysOfWeekWidth = lineWidth / 2;
+
+    const arcFinishAngle = radian(0.218);
+    const arcStartAngle = radian(2) - arcFinishAngle;
+
+    const dX = 2 * Math.cos(arcFinishAngle) * radius;
+    const dY = 2 * Math.sin(arcFinishAngle) * radius;
+    const x1 = margin + lineWidth / 2 + radius;
+    const x2 = x1 + dX;
+
+    let y = margin + lineWidth / 2 + radius;
+
+    const numberOfSegments = 31;
+    // Lengths are in radians
+    const gapLength = radian(2) / 360; // 1 degree
+
+    const segmentAndGapLength = (arcStartAngle - arcFinishAngle + gapLength) / numberOfSegments;
+
+    const segmentLength = segmentAndGapLength - gapLength;
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // function nextColor() {
+    //     const rgb = 'rgb(' + r + ', ' + g + ', ' + b + ')';
+    //     r += dR;
+    //     g += dG;
+    //     b += dB;
+    //     return rgb;
+    // }
+
+    function getTX(circleCenterX, angle, radius, isLeft) {
+        return circleCenterX + Math.cos(angle + (isLeft === true?-1:1) * segmentLength / 2) * radius;
+    }
+
+    function getTY(circleCenterY, angle, radius, isLeft) {
+        return circleCenterY + Math.sin(angle + (isLeft === true?-1:1) * segmentLength / 2) * radius;
+    }
+
+    function drawDayNumber(circleCenterX, circleCenterY, radius, angle, dayNumber, isLeft) {
+        const tX = getTX(circleCenterX, angle, radius, isLeft);
+        const tY = getTY(circleCenterY, angle, radius, isLeft);
+        ctx.font = "19px Verdana";
+        ctx.fillStyle = "white";
+        ctx.fillText(dayNumber.toString().padStart(2, "0"), tX, tY);
+    }
+
+    function drawDayName(circleCenterX, circleCenterY, radius, angle, dayName, isLeft) {
+        const tX = getTX(circleCenterX, angle, radius, isLeft);
+        const tY = getTY(circleCenterY, angle, radius, isLeft);
+        ctx.font = "12px Verdana";
+        if (dayName === SA || dayName === SU)
+            ctx.fillStyle = "orange";
+        else
+            ctx.fillStyle = "black";
+        ctx.fillText(dayName, tX, tY);
+    }
+
+    function drawWeekNumber(circleCenterX, circleCenterY, radius, angle, weekNumber, isLeft) {
+        const tX = getTX(circleCenterX, angle, radius, isLeft);
+        const tY = getTY(circleCenterY, angle, radius, isLeft);
+        ctx.font = "14px Verdana";
+        ctx.fillStyle = "white";
+        ctx.fillText(weekNumber.toString().padStart(2, "0"), tX, tY);
+    }
+
+    function nextDayName(dayName) {
+        const nextDay = new Map([[MO, TU], [TU, WE], [WE, TH], [TH, FR], [FR, SA], [SA, SU], [SU, MO]]);
+        return nextDay.get(dayName);
+    }
+
+    // function previousDayName(dayName) {
+    //     const previousDay = new Map([[TU, MO], [WE, TU], [TH, WE], [FR, TH], [SA, FR], [SU, SA], [MO, SU]]);
+    //     return previousDay.get(dayName);
+    // }
+
+    let weekNumber = 1;
+
+    function Color(r, g, b) {
+        this.r = r;
+        this.g = g;
+        this.b = b;
+        this.rgb = function() {
+            return 'rgb(' + r + ', ' + g + ', ' + b + ')';
+        };
+        this.delta = function (other, steps) {
+            return new Color(d(this.r, other.r, steps), d(this.g, other.g, steps), d(this.b, other.b, steps));
+        };
+
+        function d(c1, c2, steps) {
+            return (c1 - c2) / steps;
+        }
+
+        this.add = function (delta) {
+            return new Color(this.r + delta.r, this.g + delta.g, this.b + delta.b);
+        }
+    }
+
+    function Gradient(startColor, finishColor, steps) {
+        this.deltaColor = finishColor.delta(startColor, steps);
+        this.nextColor = startColor;
+        this.next = function () {
+            const result = this.nextColor.rgb();
+            this.nextColor = this.nextColor.add(this.deltaColor);
+            return result;
+        }
+    }
+
+    function drawMonthName(monthName) {
+        ctx.font = "40px Verdana";
+        ctx.fillStyle = "white";
+        ctx.fillText(monthName, x1, y);
+    }
+
+    for (let n = 0; n < 6; n++) {
+
+        let startColor = new Color(159, 210, 213);
+        let finishColor = new Color(33, 121, 192);
+
+        const gradientColor = new Gradient(startColor, finishColor, numberOfSegments);
+
+        const daysInMonth = 28;
+        const monthName = "January";
+
+        drawMonthName(monthName);
+
+        let dayNumber = 1;
+        let dayName = MO;
+
+        for (let angle = arcStartAngle; angle > arcFinishAngle; angle -= segmentAndGapLength) {
+            ctx.beginPath();
+            ctx.lineWidth = lineWidth;
+            ctx.strokeStyle = gradientColor.next();
+            ctx.arc(x1, y, radius, angle - segmentLength, angle);
+            ctx.stroke();
+            if (dayNumber <= daysInMonth)
+                drawDayNumber(x1, y, radius, angle, dayNumber, true);
+
+            ctx.beginPath();
+            ctx.lineWidth = daysOfWeekWidth;
+            ctx.strokeStyle = "grey";
+            ctx.arc(x1, y, daysOfWeekRadius, angle - segmentLength, angle);
+            ctx.stroke();
+            if (dayNumber <= daysInMonth) {
+                drawDayName(x1, y, daysOfWeekRadius, angle, dayName, true);
+                if (dayName === MO) {
+                    drawWeekNumber(x1, y, daysOfWeekRadius - daysOfWeekWidth, angle, weekNumber, true);
+                    weekNumber++;
+                }
+            }
+
+            dayNumber++;
+            dayName = nextDayName(dayName);
+        }
+
+        y += dY;
+
+        // right month
+        dayNumber = 1;
+        dayName = MO;
+
+        for (let angle = radian(1) + arcFinishAngle + gapLength; angle < radian(3)- arcFinishAngle; angle += segmentAndGapLength) {
+            ctx.beginPath();
+            ctx.lineWidth = lineWidth;
+            ctx.strokeStyle = gradientColor.next();
+            ctx.arc(x2, y, radius, angle, angle + segmentLength);
+            ctx.stroke();
+            if (dayNumber <= daysInMonth)
+                drawDayNumber(x2, y, radius, angle, dayNumber, false);
+
+            ctx.beginPath();
+            ctx.lineWidth = daysOfWeekWidth;
+            ctx.strokeStyle = "grey";
+            ctx.arc(x2, y, daysOfWeekRadius, angle, angle + segmentLength);
+            ctx.stroke();
+            if (dayNumber <= daysInMonth) {
+                drawDayName(x2, y, daysOfWeekRadius, angle, dayName, false);
+                if (dayName === MO) {
+                    drawWeekNumber(x2, y, daysOfWeekRadius - daysOfWeekWidth, angle, weekNumber, false);
+                    weekNumber++;
+                }
+            }
+
+            dayNumber++;
+            dayName = nextDayName(dayName);
+        }
+
+
+        // ctx.beginPath();
+        // ctx.lineWidth = lineWidth;
+        // ctx.strokeStyle = "black";
+        // ctx.arc(x2, y, radius, radian(1) + arcStartAngle, radian(1) - arcStartAngle);
+        // ctx.stroke();
+        y += dY;
+    }
+</script>
+
