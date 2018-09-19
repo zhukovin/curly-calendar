@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html>
-<body>
-
-<canvas id="myCanvas" width="1600" height="7000" style="background-color: #2B2B2B;">
-    Your browser does not support the canvas element.
-</canvas>
-
-</body>
+    <body>
+        <canvas id="myCanvas" width="1600" height="4000">
+            <!--style="background-color: #2B2B2B;"-->
+            Your browser does not support the canvas element.
+        </canvas>
+    </body>
 </html>
 <script>
     const MO = "Mo";
@@ -16,6 +15,8 @@
     const FR = "Fr";
     const SA = "Sa";
     const SU = "Su";
+
+    const FONT_FAMILY = "Calibri";
 
     function radian(r) {
         return r * Math.PI;
@@ -63,7 +64,7 @@
     function drawDayNumber(circleCenterX, circleCenterY, radius, angle, dayNumber, direction) {
         const tX = getTX(circleCenterX, angle, radius, direction);
         const tY = getTY(circleCenterY, angle, radius, direction);
-        ctx.font = "19px Verdana";
+        ctx.font = defaultFont(19);
         ctx.fillStyle = "white";
         ctx.fillText(dayNumber.toString().padStart(2, "0"), tX, tY);
     }
@@ -71,7 +72,7 @@
     function drawDayName(circleCenterX, circleCenterY, radius, angle, dayName, direction) {
         const tX = getTX(circleCenterX, angle, radius, direction);
         const tY = getTY(circleCenterY, angle, radius, direction);
-        ctx.font = "12px Verdana";
+        ctx.font = defaultFont(12);
         if (dayName === SA || dayName === SU)
             ctx.fillStyle = "orange";
         else
@@ -82,7 +83,7 @@
     function drawWeekNumber(circleCenterX, circleCenterY, radius, angle, weekNumber, direction) {
         const tX = getTX(circleCenterX, angle, radius, direction);
         const tY = getTY(circleCenterY, angle, radius, direction);
-        ctx.font = "14px Verdana";
+        ctx.font = defaultFont(14);
         ctx.fillStyle = "white";
         ctx.fillText(weekNumber.toString().padStart(2, "0"), tX, tY);
     }
@@ -96,7 +97,7 @@
         this.r = r;
         this.g = g;
         this.b = b;
-        this.rgb = function() {
+        this.rgb = function () {
             return 'rgb(' + r + ', ' + g + ', ' + b + ')';
         };
         this.delta = function (other, steps) {
@@ -123,7 +124,7 @@
     }
 
     function drawMonthName(monthName, x) {
-        ctx.font = "40px Verdana";
+        ctx.font = defaultFont(40);
         ctx.fillStyle = "white";
         ctx.fillText(monthName, x, centerY);
     }
@@ -145,8 +146,8 @@
 
         for (let angle = startAngle; continueFunction(angle); angle += direction * segmentAndGapLength) {
             const s = segmentLength;
-            const segmentStartAngle = angle - s/2 + direction * s/2;
-            const segmentFinishAngle = angle + s/2 + direction * s/2;
+            const segmentStartAngle = angle - s / 2 + direction * s / 2;
+            const segmentFinishAngle = angle + s / 2 + direction * s / 2;
             drawBackground(centerX, centerY, radius, segmentStartAngle, segmentFinishAngle, lineWidth, gradientColor.next());
             drawBackground(centerX, centerY, daysOfWeekRadius, segmentStartAngle, segmentFinishAngle, daysOfWeekWidth, "grey");
             if (dayNumber <= daysInMonth) {
@@ -167,38 +168,96 @@
     function drawRightMonth(monthName, daysInMonth, startColor, finishColor) {
         const startAngle = radian(1) + arcFinishAngle + gapLength / 2;
         const finishAngle = radian(3) - arcFinishAngle;
-        drawMonth(RIGHT, monthName, daysInMonth, rightCenterX, startAngle, function (angle) {return angle < finishAngle}, startColor, finishColor);
+        drawMonth(RIGHT, monthName, daysInMonth, rightCenterX, startAngle, function (angle) {
+            return angle < finishAngle
+        }, startColor, finishColor);
     }
 
     function drawLeftMonth(monthName, daysInMonth, startColor, finishColor) {
         const startAngle = arcStartAngle - gapLength / 2;
         const finishAngle = arcFinishAngle;
-        drawMonth(LEFT, monthName, daysInMonth, leftCenterX, startAngle, function (angle) {return angle > finishAngle}, startColor, finishColor);
+        drawMonth(LEFT, monthName, daysInMonth, leftCenterX, startAngle, function (angle) {
+            return angle > finishAngle
+        }, startColor, finishColor);
     }
 
     let weekNumber = 1;
 
     let dayName = MO;
 
+    const MorningGlory = new Color(159, 210, 213);
+    const Pelorous = new Color(33, 121, 192);
+    const Apple = new Color(104, 187, 89);
+    const Citrus = new Color(161, 198, 0);
+    const GoldenYellow = new Color(244, 237, 0);
+    const HarleyDavidsonOrange = new Color(230, 74, 22);
+    const Alizarin = new Color(227, 30, 39);
+    const MoonYellow = new Color(242, 183, 21);
+    const TulipTree = new Color(224, 172, 54);
+    const Tussock = new Color(183, 131, 71);
+    const AirForceBlue = new Color(85, 131, 157);
+
     let colors = [
-        new Color(159,210,213),
-        new Color(33,121,192),
-        new Color(104,187,89),
-        new Color(161,198,0),
-        new Color(244,237,0),
-        new Color(230,74,22),
-        new Color(231,73,38),
-        new Color(242,183,21),
-        new Color(224,172,54),
-        new Color(183,131,71),
-        new Color(85,131,157),
-        new Color(29,143,197),
-        new Color(97,197,213)
+        MorningGlory, Pelorous, Apple, Citrus,
+        GoldenYellow, HarleyDavidsonOrange,
+        Alizarin, MoonYellow, TulipTree, Tussock,
+        AirForceBlue, Pelorous, MorningGlory
     ];
+
+    function defaultFont(size) {
+        return size + 'px ' + FONT_FAMILY;
+    }
+
+    function drawTitle() {
+        const x = rightCenterX;
+        let y = centerY - dY / 2;
+
+        ctx.fillStyle = "white";
+
+        ctx.font = defaultFont(40);
+        ctx.fillText("Year", x, y - 65);
+
+        ctx.fontWeight = "bold";
+        ctx.font = defaultFont(100);
+        ctx.fillText("2018", x, y);
+
+        ctx.fontWeight = "normal";
+        ctx.font = defaultFont(40);
+        ctx.fillText("Calendar", x, y + 65);
+
+        const numberOfDots = 11;
+        const w = 15;
+        ctx.lineWidth = w;
+        const g = w / 3;
+
+        let m = x - (numberOfDots * w + (numberOfDots - 1) * g) / 2;
+        let n = y + 100;
+
+        for (let c = 0; c < numberOfDots; c++) {
+            ctx.beginPath();
+            ctx.strokeStyle = colors[c].rgb();
+            ctx.moveTo(m, n);
+            m += w;
+            ctx.lineTo(m, n);
+            m += g;
+            ctx.stroke();
+        }
+    }
+
+    function drawBack() {
+        ctx.beginPath();
+        ctx.fillStyle = "#2B2B2B";
+        ctx.rect(0, 0, 1000, 4000);
+        ctx.fill();
+    }
+
+    drawBack();
+
+    drawTitle();
 
     let c = 0;
 
-    drawLeftMonth("January", 31, colors[c++], colors[c]);
+    drawLeftMonth("January", 31, colors[c], colors[++c]);
     drawRightMonth("February", 28, colors[c++], colors[c]);
     drawLeftMonth("March", 31, colors[c++], colors[c]);
     drawRightMonth("April", 30, colors[c++], colors[c]);
