@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en-US">
     <body>
         <canvas id="myCanvas" width="1600" height="4000">
             <!--style="background-color: #2B2B2B;"-->
@@ -17,6 +17,8 @@
     const SU = "Su";
 
     const FONT_FAMILY = "Calibri";
+
+    const YEAR = 2026;
 
     function radian(r) {
         return r * Math.PI;
@@ -154,11 +156,11 @@
                 drawDayNumber(centerX, centerY, radius, angle, dayNumber, direction);
                 drawDayName(centerX, centerY, daysOfWeekRadius, angle, dayName, direction);
                 if (dayName === MO) {
-                    drawWeekNumber(centerX, centerY, daysOfWeekRadius - daysOfWeekWidth, angle, weekNumber, direction);
-                    weekNumber++;
+                    drawWeekNumber(centerX, centerY, daysOfWeekRadius - daysOfWeekWidth, angle, isoWeek(currentDate), direction);
                 }
                 dayNumber++;
                 dayName = nextDayName(dayName);
+                currentDate.setDate(currentDate.getDate() + 1);
             }
         }
 
@@ -181,9 +183,23 @@
         }, startColor, finishColor);
     }
 
-    let weekNumber = 1;
+    const DAY_NAMES_BY_JS_INDEX = [SU, MO, TU, WE, TH, FR, SA];
+    let dayName = DAY_NAMES_BY_JS_INDEX[new Date(YEAR, 0, 1).getDay()];
+    let currentDate = new Date(YEAR, 0, 1);
 
-    let dayName = MO;
+    function daysInMonthOf(monthIndex) {
+        return new Date(YEAR, monthIndex + 1, 0).getDate();
+    }
+
+    function isoWeek(date) {
+        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+        const dayNum = (d.getUTCDay() + 6) % 7; // Mon=0..Sun=6
+        d.setUTCDate(d.getUTCDate() - dayNum + 3); // nearest Thursday
+        const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+        const firstThursdayDayNum = (firstThursday.getUTCDay() + 6) % 7;
+        firstThursday.setUTCDate(firstThursday.getUTCDate() - firstThursdayDayNum + 3);
+        return 1 + Math.round((d - firstThursday) / (7 * 24 * 60 * 60 * 1000));
+    }
 
     const MorningGlory = new Color(159, 210, 213);
     const Pelorous = new Color(33, 121, 192);
@@ -219,7 +235,7 @@
 
         ctx.fontWeight = "bold";
         ctx.font = defaultFont(100);
-        ctx.fillText("2018", x, y);
+        ctx.fillText(YEAR.toString(), x, y);
 
         ctx.fontWeight = "normal";
         ctx.font = defaultFont(40);
@@ -257,18 +273,18 @@
 
     let c = 0;
 
-    drawLeftMonth("January", 31, colors[c], colors[++c]);
-    drawRightMonth("February", 28, colors[c++], colors[c]);
-    drawLeftMonth("March", 31, colors[c++], colors[c]);
-    drawRightMonth("April", 30, colors[c++], colors[c]);
-    drawLeftMonth("May", 31, colors[c++], colors[c]);
-    drawRightMonth("June", 30, colors[c++], colors[c]);
-    drawLeftMonth("July", 31, colors[c++], colors[c]);
-    drawRightMonth("August", 31, colors[c++], colors[c]);
-    drawLeftMonth("September", 30, colors[c++], colors[c]);
-    drawRightMonth("October", 31, colors[c++], colors[c]);
-    drawLeftMonth("November", 30, colors[c++], colors[c]);
-    drawRightMonth("December", 31, colors[c++], colors[c]);
+    drawLeftMonth("January", daysInMonthOf(0), colors[c], colors[++c]);
+    drawRightMonth("February", daysInMonthOf(1), colors[c++], colors[c]);
+    drawLeftMonth("March", daysInMonthOf(2), colors[c++], colors[c]);
+    drawRightMonth("April", daysInMonthOf(3), colors[c++], colors[c]);
+    drawLeftMonth("May", daysInMonthOf(4), colors[c++], colors[c]);
+    drawRightMonth("June", daysInMonthOf(5), colors[c++], colors[c]);
+    drawLeftMonth("July", daysInMonthOf(6), colors[c++], colors[c]);
+    drawRightMonth("August", daysInMonthOf(7), colors[c++], colors[c]);
+    drawLeftMonth("September", daysInMonthOf(8), colors[c++], colors[c]);
+    drawRightMonth("October", daysInMonthOf(9), colors[c++], colors[c]);
+    drawLeftMonth("November", daysInMonthOf(10), colors[c++], colors[c]);
+    drawRightMonth("December", daysInMonthOf(11), colors[c++], colors[c]);
 
 </script>
 
