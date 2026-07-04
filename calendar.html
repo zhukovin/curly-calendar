@@ -216,10 +216,13 @@
         const x = rightCenterX;
         let y = centerY - dY / 2;
 
+        const yearLabelGap = 75; // distance between "Year" and the year number
+        const calendarLabelGap = 65; // distance between the year number and "Calendar"
+
         ctx.fillStyle = "white";
 
         ctx.font = defaultFont(40);
-        ctx.fillText("Year", x, y - 65);
+        ctx.fillText("Year", x, y - yearLabelGap);
 
         ctx.fontWeight = "bold";
         ctx.font = defaultFont(100);
@@ -227,7 +230,7 @@
 
         ctx.fontWeight = "normal";
         ctx.font = defaultFont(40);
-        ctx.fillText("Calendar", x, y + 65);
+        ctx.fillText("Calendar", x, y + calendarLabelGap);
 
         const numberOfDots = 11;
         const w = 15;
