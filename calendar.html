@@ -18,7 +18,7 @@
 
     const FONT_FAMILY = "Calibri";
 
-    const YEAR = 2026;
+    const YEAR = 2028;
 
     function radian(r) {
         return r * Math.PI;
@@ -41,13 +41,8 @@
 
     let centerY = margin + lineWidth / 2 + radius;
 
-    const numberOfSegments = 31;
     // Lengths are in radians
     const gapLength = radian(2) / 360; // 1 degree
-
-    const segmentAndGapLength = (arcStartAngle - arcFinishAngle) / numberOfSegments;
-
-    const segmentLength = segmentAndGapLength - gapLength;
 
     const LEFT = -1;
     const RIGHT = 1;
@@ -55,25 +50,25 @@
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    function getTX(circleCenterX, angle, radius, direction) {
+    function getTX(circleCenterX, angle, radius, segmentLength, direction) {
         return circleCenterX + Math.cos(angle + direction * segmentLength / 2) * radius;
     }
 
-    function getTY(circleCenterY, angle, radius, direction) {
+    function getTY(circleCenterY, angle, radius, segmentLength, direction) {
         return circleCenterY + Math.sin(angle + direction * segmentLength / 2) * radius;
     }
 
-    function drawDayNumber(circleCenterX, circleCenterY, radius, angle, dayNumber, direction) {
-        const tX = getTX(circleCenterX, angle, radius, direction);
-        const tY = getTY(circleCenterY, angle, radius, direction);
+    function drawDayNumber(circleCenterX, circleCenterY, radius, angle, segmentLength, dayNumber, direction) {
+        const tX = getTX(circleCenterX, angle, radius, segmentLength, direction);
+        const tY = getTY(circleCenterY, angle, radius, segmentLength, direction);
         ctx.font = defaultFont(19);
         ctx.fillStyle = "white";
         ctx.fillText(dayNumber.toString().padStart(2, "0"), tX, tY);
     }
 
-    function drawDayName(circleCenterX, circleCenterY, radius, angle, dayName, direction) {
-        const tX = getTX(circleCenterX, angle, radius, direction);
-        const tY = getTY(circleCenterY, angle, radius, direction);
+    function drawDayName(circleCenterX, circleCenterY, radius, angle, segmentLength, dayName, direction) {
+        const tX = getTX(circleCenterX, angle, radius, segmentLength, direction);
+        const tY = getTY(circleCenterY, angle, radius, segmentLength, direction);
         ctx.font = defaultFont(12);
         if (dayName === SA || dayName === SU)
             ctx.fillStyle = "orange";
@@ -82,9 +77,9 @@
         ctx.fillText(dayName, tX, tY);
     }
 
-    function drawWeekNumber(circleCenterX, circleCenterY, radius, angle, weekNumber, direction) {
-        const tX = getTX(circleCenterX, angle, radius, direction);
-        const tY = getTY(circleCenterY, angle, radius, direction);
+    function drawWeekNumber(circleCenterX, circleCenterY, radius, angle, segmentLength, weekNumber, direction) {
+        const tX = getTX(circleCenterX, angle, radius, segmentLength, direction);
+        const tY = getTY(circleCenterY, angle, radius, segmentLength, direction);
         ctx.font = defaultFont(14);
         ctx.fillStyle = "white";
         ctx.fillText(weekNumber.toString().padStart(2, "0"), tX, tY);
@@ -139,29 +134,28 @@
         ctx.stroke();
     }
 
-    function drawMonth(direction, monthName, daysInMonth, centerX, startAngle, continueFunction, startColor, finishColor) {
+    function drawMonth(direction, monthName, daysInMonth, centerX, startAngle, startColor, finishColor) {
 
         drawMonthName(monthName, centerX);
 
-        let dayNumber = 1;
-        const gradientColor = new Gradient(startColor, finishColor, numberOfSegments);
+        const segmentAndGapLength = (arcStartAngle - arcFinishAngle) / daysInMonth;
+        const segmentLength = segmentAndGapLength - gapLength;
+        const gradientColor = new Gradient(startColor, finishColor, daysInMonth);
 
-        for (let angle = startAngle; continueFunction(angle); angle += direction * segmentAndGapLength) {
+        for (let dayNumber = 1; dayNumber <= daysInMonth; dayNumber++) {
+            const angle = startAngle + direction * segmentAndGapLength * (dayNumber - 1);
             const s = segmentLength;
             const segmentStartAngle = angle - s / 2 + direction * s / 2;
             const segmentFinishAngle = angle + s / 2 + direction * s / 2;
             drawBackground(centerX, centerY, radius, segmentStartAngle, segmentFinishAngle, lineWidth, gradientColor.next());
             drawBackground(centerX, centerY, daysOfWeekRadius, segmentStartAngle, segmentFinishAngle, daysOfWeekWidth, "grey");
-            if (dayNumber <= daysInMonth) {
-                drawDayNumber(centerX, centerY, radius, angle, dayNumber, direction);
-                drawDayName(centerX, centerY, daysOfWeekRadius, angle, dayName, direction);
-                if (dayName === MO) {
-                    drawWeekNumber(centerX, centerY, daysOfWeekRadius - daysOfWeekWidth, angle, isoWeek(currentDate), direction);
-                }
-                dayNumber++;
-                dayName = nextDayName(dayName);
-                currentDate.setDate(currentDate.getDate() + 1);
+            drawDayNumber(centerX, centerY, radius, angle, segmentLength, dayNumber, direction);
+            drawDayName(centerX, centerY, daysOfWeekRadius, angle, segmentLength, dayName, direction);
+            if (dayName === MO) {
+                drawWeekNumber(centerX, centerY, daysOfWeekRadius - daysOfWeekWidth, angle, segmentLength, isoWeek(currentDate), direction);
             }
+            dayName = nextDayName(dayName);
+            currentDate.setDate(currentDate.getDate() + 1);
         }
 
         centerY += dY;
@@ -169,18 +163,12 @@
 
     function drawRightMonth(monthName, daysInMonth, startColor, finishColor) {
         const startAngle = radian(1) + arcFinishAngle + gapLength / 2;
-        const finishAngle = radian(3) - arcFinishAngle;
-        drawMonth(RIGHT, monthName, daysInMonth, rightCenterX, startAngle, function (angle) {
-            return angle < finishAngle
-        }, startColor, finishColor);
+        drawMonth(RIGHT, monthName, daysInMonth, rightCenterX, startAngle, startColor, finishColor);
     }
 
     function drawLeftMonth(monthName, daysInMonth, startColor, finishColor) {
         const startAngle = arcStartAngle - gapLength / 2;
-        const finishAngle = arcFinishAngle;
-        drawMonth(LEFT, monthName, daysInMonth, leftCenterX, startAngle, function (angle) {
-            return angle > finishAngle
-        }, startColor, finishColor);
+        drawMonth(LEFT, monthName, daysInMonth, leftCenterX, startAngle, startColor, finishColor);
     }
 
     const DAY_NAMES_BY_JS_INDEX = [SU, MO, TU, WE, TH, FR, SA];
