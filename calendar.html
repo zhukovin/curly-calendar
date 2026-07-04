@@ -5,6 +5,7 @@
             <!--style="background-color: #2B2B2B;"-->
             Your browser does not support the canvas element.
         </canvas>
+        <button id="downloadBtn" style="font-size: 24px; padding: 16px 32px; margin: 20px;">Download PNG</button>
     </body>
 </html>
 <script>
@@ -20,11 +21,22 @@
 
     const YEAR = 2028;
 
+    const POSTER_DPI = 600;
+    const POSTER_WIDTH_IN = 12;
+    const POSTER_HEIGHT_IN = 18;
+    const POSTER_VERTICAL_MARGIN_IN = 0.5;
+    const POSTER_GUTTER_IN = 0.5; // gap between the two copies, for cutting
+    const posterWidthPx = POSTER_WIDTH_IN * POSTER_DPI;
+    const posterHeightPx = POSTER_HEIGHT_IN * POSTER_DPI;
+
     function radian(r) {
         return r * Math.PI;
     }
 
-    const ctx = document.getElementById("myCanvas").getContext("2d");
+    const canvas = document.getElementById("myCanvas");
+    canvas.width = posterWidthPx;
+    canvas.height = posterHeightPx;
+    const ctx = canvas.getContext("2d");
     const margin = 50;
     const radius = 240;
     const lineWidth = 80;
@@ -40,6 +52,17 @@
     const rightCenterX = leftCenterX + dX;
 
     let centerY = margin + lineWidth / 2 + radius;
+
+    const singleCopyWidth = rightCenterX + radius + lineWidth / 2 + margin;
+    const singleCopyHeight = 2 * margin + lineWidth + 2 * radius + 11 * dY;
+
+    const verticalMarginPx = POSTER_VERTICAL_MARGIN_IN * POSTER_DPI;
+    const gutterPx = POSTER_GUTTER_IN * POSTER_DPI;
+    const scale = (posterHeightPx - 2 * verticalMarginPx) / singleCopyHeight;
+
+    const pairWidthPx = 2 * scale * singleCopyWidth + gutterPx;
+    const leftOffsetPx = (posterWidthPx - pairWidthPx) / 2;
+    const topOffsetPx = (posterHeightPx - scale * singleCopyHeight) / 2;
 
     // Lengths are in radians
     const gapLength = radian(2) / 360; // 1 degree
@@ -254,28 +277,69 @@
     function drawBack() {
         ctx.beginPath();
         ctx.fillStyle = "#2B2B2B";
-        ctx.rect(0, 0, 1000, 4000);
+        ctx.rect(0, 0, canvas.width, canvas.height);
         ctx.fill();
+    }
+
+    function drawCalendarBody() {
+        centerY = margin + lineWidth / 2 + radius;
+        dayName = DAY_NAMES_BY_JS_INDEX[new Date(YEAR, 0, 1).getDay()];
+        currentDate = new Date(YEAR, 0, 1);
+
+        drawTitle();
+
+        let c = 0;
+
+        drawLeftMonth("January", daysInMonthOf(0), colors[c], colors[++c]);
+        drawRightMonth("February", daysInMonthOf(1), colors[c++], colors[c]);
+        drawLeftMonth("March", daysInMonthOf(2), colors[c++], colors[c]);
+        drawRightMonth("April", daysInMonthOf(3), colors[c++], colors[c]);
+        drawLeftMonth("May", daysInMonthOf(4), colors[c++], colors[c]);
+        drawRightMonth("June", daysInMonthOf(5), colors[c++], colors[c]);
+        drawLeftMonth("July", daysInMonthOf(6), colors[c++], colors[c]);
+        drawRightMonth("August", daysInMonthOf(7), colors[c++], colors[c]);
+        drawLeftMonth("September", daysInMonthOf(8), colors[c++], colors[c]);
+        drawRightMonth("October", daysInMonthOf(9), colors[c++], colors[c]);
+        drawLeftMonth("November", daysInMonthOf(10), colors[c++], colors[c]);
+        drawRightMonth("December", daysInMonthOf(11), colors[c++], colors[c]);
     }
 
     drawBack();
 
-    drawTitle();
+    ctx.save();
+    ctx.translate(leftOffsetPx, topOffsetPx);
+    ctx.scale(scale, scale);
+    drawCalendarBody();
+    ctx.restore();
 
-    let c = 0;
+    ctx.save();
+    ctx.translate(leftOffsetPx + scale * singleCopyWidth + gutterPx, topOffsetPx);
+    ctx.scale(scale, scale);
+    drawCalendarBody();
+    ctx.restore();
 
-    drawLeftMonth("January", daysInMonthOf(0), colors[c], colors[++c]);
-    drawRightMonth("February", daysInMonthOf(1), colors[c++], colors[c]);
-    drawLeftMonth("March", daysInMonthOf(2), colors[c++], colors[c]);
-    drawRightMonth("April", daysInMonthOf(3), colors[c++], colors[c]);
-    drawLeftMonth("May", daysInMonthOf(4), colors[c++], colors[c]);
-    drawRightMonth("June", daysInMonthOf(5), colors[c++], colors[c]);
-    drawLeftMonth("July", daysInMonthOf(6), colors[c++], colors[c]);
-    drawRightMonth("August", daysInMonthOf(7), colors[c++], colors[c]);
-    drawLeftMonth("September", daysInMonthOf(8), colors[c++], colors[c]);
-    drawRightMonth("October", daysInMonthOf(9), colors[c++], colors[c]);
-    drawLeftMonth("November", daysInMonthOf(10), colors[c++], colors[c]);
-    drawRightMonth("December", daysInMonthOf(11), colors[c++], colors[c]);
+    function drawCutLine() {
+        const cutLineX = leftOffsetPx + scale * singleCopyWidth + gutterPx / 2;
+        ctx.beginPath();
+        ctx.setLineDash([40, 20]);
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = "white";
+        ctx.moveTo(cutLineX, 0);
+        ctx.lineTo(cutLineX, canvas.height);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    drawCutLine();
+
+    document.getElementById("downloadBtn").addEventListener("click", () => {
+        canvas.toBlob((blob) => {
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `calendar-poster-${YEAR}.png`;
+            a.click();
+        }, "image/png");
+    });
 
 </script>
 
