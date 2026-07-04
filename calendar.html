@@ -6,6 +6,7 @@
             Your browser does not support the canvas element.
         </canvas>
         <button id="downloadBtn" style="font-size: 24px; padding: 16px 32px; margin: 20px;">Download PNG</button>
+        <label style="font-size: 20px; margin: 20px;"><input type="checkbox" id="showDottedLinesCheckbox" checked> Show dotted cut guides</label>
     </body>
 </html>
 <script>
@@ -63,6 +64,13 @@
     const pairWidthPx = 2 * scale * singleCopyWidth + gutterPx;
     const leftOffsetPx = (posterWidthPx - pairWidthPx) / 2;
     const topOffsetPx = (posterHeightPx - scale * singleCopyHeight) / 2;
+
+    const cutGuideEdgeGap = gutterPx / 2; // same distance used between the center line and each calendar
+    const cutGuideBorderLeft = leftOffsetPx - cutGuideEdgeGap;
+    const cutGuideBorderRight = leftOffsetPx + 2 * scale * singleCopyWidth + gutterPx + cutGuideEdgeGap;
+    const cutGuideBorderTop = topOffsetPx - cutGuideEdgeGap;
+    const cutGuideBorderBottom = topOffsetPx + scale * singleCopyHeight + cutGuideEdgeGap;
+    const cutGuideCenterX = leftOffsetPx + scale * singleCopyWidth + gutterPx / 2;
 
     // Lengths are in radians
     const gapLength = radian(2) / 360; // 1 degree
@@ -304,51 +312,80 @@
         drawRightMonth("December", daysInMonthOf(11), colors[c++], colors[c]);
     }
 
-    drawBack();
-
-    ctx.save();
-    ctx.translate(leftOffsetPx, topOffsetPx);
-    ctx.scale(scale, scale);
-    drawCalendarBody();
-    ctx.restore();
-
-    ctx.save();
-    ctx.translate(leftOffsetPx + scale * singleCopyWidth + gutterPx, topOffsetPx);
-    ctx.scale(scale, scale);
-    drawCalendarBody();
-    ctx.restore();
-
-    function drawCutGuides() {
-        const edgeGap = gutterPx / 2; // same distance used between the center line and each calendar
-
-        const contentLeft = leftOffsetPx;
-        const contentRight = leftOffsetPx + 2 * scale * singleCopyWidth + gutterPx;
-        const contentTop = topOffsetPx;
-        const contentBottom = topOffsetPx + scale * singleCopyHeight;
-
-        const borderLeft = contentLeft - edgeGap;
-        const borderRight = contentRight + edgeGap;
-        const borderTop = contentTop - edgeGap;
-        const borderBottom = contentBottom + edgeGap;
-        const centerX = leftOffsetPx + scale * singleCopyWidth + gutterPx / 2;
-
+    function drawDottedFrame() {
         ctx.strokeStyle = "white";
         ctx.lineWidth = 8;
         ctx.lineCap = "round";
         ctx.setLineDash([2, 22]);
 
-        ctx.strokeRect(borderLeft, borderTop, borderRight - borderLeft, borderBottom - borderTop);
+        ctx.strokeRect(cutGuideBorderLeft, cutGuideBorderTop, cutGuideBorderRight - cutGuideBorderLeft, cutGuideBorderBottom - cutGuideBorderTop);
 
         ctx.beginPath();
-        ctx.moveTo(centerX, borderTop);
-        ctx.lineTo(centerX, borderBottom);
+        ctx.moveTo(cutGuideCenterX, cutGuideBorderTop);
+        ctx.lineTo(cutGuideCenterX, cutGuideBorderBottom);
         ctx.stroke();
 
         ctx.setLineDash([]);
         ctx.lineCap = "butt";
     }
 
-    drawCutGuides();
+    function drawCropMarks() {
+        // Short solid marks just outside the frame, for aligning a ruler when cutting.
+        const markGap = 24; // gap between the frame and where the mark starts
+        const markLength = 96;
+
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 6;
+
+        function mark(x1, y1, x2, y2) {
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+
+        // top-left corner
+        mark(cutGuideBorderLeft - markGap - markLength, cutGuideBorderTop, cutGuideBorderLeft - markGap, cutGuideBorderTop);
+        mark(cutGuideBorderLeft, cutGuideBorderTop - markGap - markLength, cutGuideBorderLeft, cutGuideBorderTop - markGap);
+        // top-right corner
+        mark(cutGuideBorderRight + markGap, cutGuideBorderTop, cutGuideBorderRight + markGap + markLength, cutGuideBorderTop);
+        mark(cutGuideBorderRight, cutGuideBorderTop - markGap - markLength, cutGuideBorderRight, cutGuideBorderTop - markGap);
+        // bottom-left corner
+        mark(cutGuideBorderLeft - markGap - markLength, cutGuideBorderBottom, cutGuideBorderLeft - markGap, cutGuideBorderBottom);
+        mark(cutGuideBorderLeft, cutGuideBorderBottom + markGap, cutGuideBorderLeft, cutGuideBorderBottom + markGap + markLength);
+        // bottom-right corner
+        mark(cutGuideBorderRight + markGap, cutGuideBorderBottom, cutGuideBorderRight + markGap + markLength, cutGuideBorderBottom);
+        mark(cutGuideBorderRight, cutGuideBorderBottom + markGap, cutGuideBorderRight, cutGuideBorderBottom + markGap + markLength);
+
+        // center dividing line, top and bottom
+        mark(cutGuideCenterX, cutGuideBorderTop - markGap - markLength, cutGuideCenterX, cutGuideBorderTop - markGap);
+        mark(cutGuideCenterX, cutGuideBorderBottom + markGap, cutGuideCenterX, cutGuideBorderBottom + markGap + markLength);
+    }
+
+    function render() {
+        drawBack();
+
+        ctx.save();
+        ctx.translate(leftOffsetPx, topOffsetPx);
+        ctx.scale(scale, scale);
+        drawCalendarBody();
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(leftOffsetPx + scale * singleCopyWidth + gutterPx, topOffsetPx);
+        ctx.scale(scale, scale);
+        drawCalendarBody();
+        ctx.restore();
+
+        if (document.getElementById("showDottedLinesCheckbox").checked) {
+            drawDottedFrame();
+        }
+        drawCropMarks();
+    }
+
+    render();
+
+    document.getElementById("showDottedLinesCheckbox").addEventListener("change", render);
 
     document.getElementById("downloadBtn").addEventListener("click", () => {
         canvas.toBlob((blob) => {
