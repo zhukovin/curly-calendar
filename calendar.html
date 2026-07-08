@@ -11,6 +11,10 @@
             <label><input type="radio" name="copyCount" value="1"> 1 Calendar</label>
             <label><input type="radio" name="copyCount" value="2" checked> 2 Calendars</label>
         </span>
+        <span style="font-size: 20px; margin: 20px;">
+            <label><input type="radio" name="theme" value="dark" checked> Dark</label>
+            <label><input type="radio" name="theme" value="light"> Light</label>
+        </span>
         <div id="letterPagesContainer" style="margin: 20px;"></div>
     </body>
 </html>
@@ -26,6 +30,15 @@
     const FONT_FAMILY = '"DIN Alternate", "DIN Condensed", Arial, sans-serif';
 
     const YEAR = 2026;
+
+    const THEMES = {
+        dark: { background: "#2B2B2B", text: "white", guide: "white" },
+        light: { background: "#F5F2EC", text: "#2B2B2B", guide: "#2B2B2B" }
+    };
+
+    function getSelectedTheme() {
+        return THEMES[document.querySelector('input[name="theme"]:checked').value];
+    }
 
     const POSTER_DPI = 600;
     const POSTER_WIDTH_IN = 12;
@@ -143,7 +156,7 @@
         const tX = getTX(circleCenterX, angle, radius, segmentLength, direction);
         const tY = getTY(circleCenterY, angle, radius, segmentLength, direction);
         ctx.font = defaultFont(14);
-        ctx.fillStyle = "white";
+        ctx.fillStyle = getSelectedTheme().text;
         ctx.fillText(weekNumber.toString().padStart(2, "0"), tX, tY);
     }
 
@@ -184,7 +197,7 @@
 
     function drawMonthName(monthName, x) {
         ctx.font = defaultFont(40);
-        ctx.fillStyle = "white";
+        ctx.fillStyle = getSelectedTheme().text;
         ctx.fillText(monthName, x, centerY);
     }
 
@@ -281,7 +294,7 @@
         const yearLabelGap = 75; // distance between "Year" and the year number
         const calendarLabelGap = 65; // distance between the year number and "Calendar"
 
-        ctx.fillStyle = "white";
+        ctx.fillStyle = getSelectedTheme().text;
 
         ctx.font = defaultFont(40);
         ctx.fillText("Year", x, y - yearLabelGap);
@@ -313,7 +326,7 @@
 
     function drawBack() {
         ctx.beginPath();
-        ctx.fillStyle = "#2B2B2B";
+        ctx.fillStyle = getSelectedTheme().background;
         ctx.rect(0, 0, canvas.width, canvas.height);
         ctx.fill();
     }
@@ -342,7 +355,7 @@
     }
 
     function drawDottedFrame(layout) {
-        ctx.strokeStyle = "white";
+        ctx.strokeStyle = getSelectedTheme().guide;
         ctx.lineWidth = 8;
         ctx.lineCap = "round";
         ctx.setLineDash([2, 22]);
@@ -370,7 +383,7 @@
         const markLength = 96;
         const { cutGuideBorderLeft, cutGuideBorderRight, cutGuideBorderTop, cutGuideBorderBottom } = layout;
 
-        ctx.strokeStyle = "white";
+        ctx.strokeStyle = getSelectedTheme().guide;
         ctx.lineWidth = 6;
 
         function mark(x1, y1, x2, y2) {
@@ -432,6 +445,10 @@
         radio.addEventListener("change", render);
     });
 
+    document.querySelectorAll('input[name="theme"]').forEach((radio) => {
+        radio.addEventListener("change", render);
+    });
+
     document.getElementById("downloadBtn").addEventListener("click", () => {
         canvas.toBlob((blob) => {
             const a = document.createElement("a");
@@ -451,7 +468,7 @@
         pageCanvas.height = letterHeightPx;
         const pageCtx = pageCanvas.getContext("2d");
 
-        pageCtx.fillStyle = "#2B2B2B";
+        pageCtx.fillStyle = getSelectedTheme().background;
         pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
 
         const previousCtx = ctx;
