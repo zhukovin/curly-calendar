@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html lang="en-US">
     <body>
-        <canvas id="myCanvas" width="1600" height="4000">
+        <canvas id="myCanvas" width="1600" height="4000" style="max-width: 90vw; height: auto; display: block;">
             <!--style="background-color: #2B2B2B;"-->
             Your browser does not support the canvas element.
         </canvas>
         <button id="downloadBtn" style="font-size: 24px; padding: 16px 32px; margin: 20px;">Download PNG</button>
         <label style="font-size: 20px; margin: 20px;"><input type="checkbox" id="showDottedLinesCheckbox" checked> Show dotted cut guides</label>
+        <span style="font-size: 20px; margin: 20px;">
+            <label><input type="radio" name="copyCount" value="1"> 1 Calendar</label>
+            <label><input type="radio" name="copyCount" value="2" checked> 2 Calendars</label>
+        </span>
     </body>
 </html>
 <script>
@@ -59,18 +63,38 @@
 
     const verticalMarginPx = POSTER_VERTICAL_MARGIN_IN * POSTER_DPI;
     const gutterPx = POSTER_GUTTER_IN * POSTER_DPI;
-    const scale = (posterHeightPx - 2 * verticalMarginPx) / singleCopyHeight;
 
-    const pairWidthPx = 2 * scale * singleCopyWidth + gutterPx;
-    const leftOffsetPx = (posterWidthPx - pairWidthPx) / 2;
-    const topOffsetPx = (posterHeightPx - scale * singleCopyHeight) / 2;
+    function computeLayout(copyCount) {
+        const scaleByHeight = (posterHeightPx - 2 * verticalMarginPx) / singleCopyHeight;
+        const scaleByWidth = (posterWidthPx - (copyCount - 1) * gutterPx) / (copyCount * singleCopyWidth);
+        const scale = Math.min(scaleByHeight, scaleByWidth);
 
-    const cutGuideEdgeGap = gutterPx / 2; // same distance used between the center line and each calendar
-    const cutGuideBorderLeft = leftOffsetPx - cutGuideEdgeGap;
-    const cutGuideBorderRight = leftOffsetPx + 2 * scale * singleCopyWidth + gutterPx + cutGuideEdgeGap;
-    const cutGuideBorderTop = topOffsetPx - cutGuideEdgeGap;
-    const cutGuideBorderBottom = topOffsetPx + scale * singleCopyHeight + cutGuideEdgeGap;
-    const cutGuideCenterX = leftOffsetPx + scale * singleCopyWidth + gutterPx / 2;
+        const rowWidthPx = copyCount * scale * singleCopyWidth + (copyCount - 1) * gutterPx;
+        const leftOffsetPx = (posterWidthPx - rowWidthPx) / 2;
+        const topOffsetPx = (posterHeightPx - scale * singleCopyHeight) / 2;
+
+        const copyOffsets = [];
+        for (let i = 0; i < copyCount; i++) {
+            copyOffsets.push(leftOffsetPx + i * (scale * singleCopyWidth + gutterPx));
+        }
+
+        const cutGuideEdgeGap = gutterPx / 2; // same distance used between divider lines and each calendar
+        const cutGuideBorderLeft = leftOffsetPx - cutGuideEdgeGap;
+        const cutGuideBorderRight = leftOffsetPx + rowWidthPx + cutGuideEdgeGap;
+        const cutGuideBorderTop = topOffsetPx - cutGuideEdgeGap;
+        const cutGuideBorderBottom = topOffsetPx + scale * singleCopyHeight + cutGuideEdgeGap;
+
+        const dividerXs = [];
+        for (let i = 0; i < copyCount - 1; i++) {
+            dividerXs.push(copyOffsets[i] + scale * singleCopyWidth + gutterPx / 2);
+        }
+
+        return {
+            scale, topOffsetPx, copyOffsets,
+            cutGuideBorderLeft, cutGuideBorderRight, cutGuideBorderTop, cutGuideBorderBottom,
+            dividerXs
+        };
+    }
 
     // Lengths are in radians
     const gapLength = radian(2) / 360; // 1 degree
@@ -310,27 +334,34 @@
         drawRightMonth("December", daysInMonthOf(11), colors[c++], colors[c]);
     }
 
-    function drawDottedFrame() {
+    function drawDottedFrame(layout) {
         ctx.strokeStyle = "white";
         ctx.lineWidth = 8;
         ctx.lineCap = "round";
         ctx.setLineDash([2, 22]);
 
-        ctx.strokeRect(cutGuideBorderLeft, cutGuideBorderTop, cutGuideBorderRight - cutGuideBorderLeft, cutGuideBorderBottom - cutGuideBorderTop);
+        ctx.strokeRect(
+            layout.cutGuideBorderLeft, layout.cutGuideBorderTop,
+            layout.cutGuideBorderRight - layout.cutGuideBorderLeft,
+            layout.cutGuideBorderBottom - layout.cutGuideBorderTop
+        );
 
-        ctx.beginPath();
-        ctx.moveTo(cutGuideCenterX, cutGuideBorderTop);
-        ctx.lineTo(cutGuideCenterX, cutGuideBorderBottom);
-        ctx.stroke();
+        for (const dividerX of layout.dividerXs) {
+            ctx.beginPath();
+            ctx.moveTo(dividerX, layout.cutGuideBorderTop);
+            ctx.lineTo(dividerX, layout.cutGuideBorderBottom);
+            ctx.stroke();
+        }
 
         ctx.setLineDash([]);
         ctx.lineCap = "butt";
     }
 
-    function drawCropMarks() {
+    function drawCropMarks(layout) {
         // Short solid marks just outside the frame, for aligning a ruler when cutting.
         const markGap = 24; // gap between the frame and where the mark starts
         const markLength = 96;
+        const { cutGuideBorderLeft, cutGuideBorderRight, cutGuideBorderTop, cutGuideBorderBottom } = layout;
 
         ctx.strokeStyle = "white";
         ctx.lineWidth = 6;
@@ -355,35 +386,44 @@
         mark(cutGuideBorderRight + markGap, cutGuideBorderBottom, cutGuideBorderRight + markGap + markLength, cutGuideBorderBottom);
         mark(cutGuideBorderRight, cutGuideBorderBottom + markGap, cutGuideBorderRight, cutGuideBorderBottom + markGap + markLength);
 
-        // center dividing line, top and bottom
-        mark(cutGuideCenterX, cutGuideBorderTop - markGap - markLength, cutGuideCenterX, cutGuideBorderTop - markGap);
-        mark(cutGuideCenterX, cutGuideBorderBottom + markGap, cutGuideCenterX, cutGuideBorderBottom + markGap + markLength);
+        // divider lines, top and bottom
+        for (const dividerX of layout.dividerXs) {
+            mark(dividerX, cutGuideBorderTop - markGap - markLength, dividerX, cutGuideBorderTop - markGap);
+            mark(dividerX, cutGuideBorderBottom + markGap, dividerX, cutGuideBorderBottom + markGap + markLength);
+        }
+    }
+
+    function getSelectedCopyCount() {
+        return Number(document.querySelector('input[name="copyCount"]:checked').value);
     }
 
     function render() {
+        const copyCount = getSelectedCopyCount();
+        const layout = computeLayout(copyCount);
+
         drawBack();
 
-        ctx.save();
-        ctx.translate(leftOffsetPx, topOffsetPx);
-        ctx.scale(scale, scale);
-        drawCalendarBody();
-        ctx.restore();
-
-        ctx.save();
-        ctx.translate(leftOffsetPx + scale * singleCopyWidth + gutterPx, topOffsetPx);
-        ctx.scale(scale, scale);
-        drawCalendarBody();
-        ctx.restore();
+        for (const offsetX of layout.copyOffsets) {
+            ctx.save();
+            ctx.translate(offsetX, layout.topOffsetPx);
+            ctx.scale(layout.scale, layout.scale);
+            drawCalendarBody();
+            ctx.restore();
+        }
 
         if (document.getElementById("showDottedLinesCheckbox").checked) {
-            drawDottedFrame();
+            drawDottedFrame(layout);
         }
-        drawCropMarks();
+        drawCropMarks(layout);
     }
 
     render();
 
     document.getElementById("showDottedLinesCheckbox").addEventListener("change", render);
+
+    document.querySelectorAll('input[name="copyCount"]').forEach((radio) => {
+        radio.addEventListener("change", render);
+    });
 
     document.getElementById("downloadBtn").addEventListener("click", () => {
         canvas.toBlob((blob) => {
