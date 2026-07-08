@@ -18,9 +18,9 @@
     const SA = "Sa";
     const SU = "Su";
 
-    const FONT_FAMILY = "Calibri";
+    const FONT_FAMILY = '"DIN Alternate", "DIN Condensed", Arial, sans-serif';
 
-    const YEAR = 2028;
+    const YEAR = 2026;
 
     const POSTER_DPI = 600;
     const POSTER_WIDTH_IN = 12;
@@ -239,8 +239,8 @@
         AirForceBlue, Pelorous, MorningGlory
     ];
 
-    function defaultFont(size) {
-        return size + 'px ' + FONT_FAMILY;
+    function defaultFont(size, weight = "normal") {
+        return weight + ' ' + size + 'px ' + FONT_FAMILY;
     }
 
     function drawTitle() {
@@ -255,11 +255,9 @@
         ctx.font = defaultFont(40);
         ctx.fillText("Year", x, y - yearLabelGap);
 
-        ctx.fontWeight = "bold";
-        ctx.font = defaultFont(100);
+        ctx.font = defaultFont(100, "bold");
         ctx.fillText(YEAR.toString(), x, y);
 
-        ctx.fontWeight = "normal";
         ctx.font = defaultFont(40);
         ctx.fillText("Calendar", x, y + calendarLabelGap);
 
