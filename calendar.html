@@ -11,6 +11,7 @@
             <label><input type="radio" name="copyCount" value="1"> 1 Calendar</label>
             <label><input type="radio" name="copyCount" value="2" checked> 2 Calendars</label>
         </span>
+        <div id="letterPagesContainer" style="margin: 20px;"></div>
     </body>
 </html>
 <script>
@@ -34,6 +35,12 @@
     const posterWidthPx = POSTER_WIDTH_IN * POSTER_DPI;
     const posterHeightPx = POSTER_HEIGHT_IN * POSTER_DPI;
 
+    const LETTER_DPI = 600;
+    const LETTER_WIDTH_IN = 8.5;
+    const LETTER_HEIGHT_IN = 11;
+    const letterWidthPx = LETTER_WIDTH_IN * LETTER_DPI;
+    const letterHeightPx = LETTER_HEIGHT_IN * LETTER_DPI;
+
     function radian(r) {
         return r * Math.PI;
     }
@@ -41,7 +48,7 @@
     const canvas = document.getElementById("myCanvas");
     canvas.width = posterWidthPx;
     canvas.height = posterHeightPx;
-    const ctx = canvas.getContext("2d");
+    let ctx = canvas.getContext("2d");
     const margin = 50;
     const radius = 240;
     const lineWidth = 80;
@@ -433,6 +440,76 @@
             a.click();
         }, "image/png");
     });
+
+    // Splits a single calendar (bordered exactly like the dotted-line frame in "1 Calendar" mode)
+    // across multiple US Letter sheets at 600 DPI, scaled so it fills the full sheet width.
+    // Pages are packed to the full sheet height except the last one, so sheets glue together
+    // with no gap at the seams.
+    function renderLetterPage(printScale, layout, pieceOffsetPx) {
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = letterWidthPx;
+        pageCanvas.height = letterHeightPx;
+        const pageCtx = pageCanvas.getContext("2d");
+
+        pageCtx.fillStyle = "#2B2B2B";
+        pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+
+        const previousCtx = ctx;
+        ctx = pageCtx;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        ctx.save();
+        ctx.translate(-layout.cutGuideBorderLeft * printScale, -layout.cutGuideBorderTop * printScale - pieceOffsetPx);
+        ctx.scale(printScale, printScale);
+        ctx.translate(layout.copyOffsets[0], layout.topOffsetPx);
+        ctx.scale(layout.scale, layout.scale);
+        drawCalendarBody();
+        ctx.restore();
+
+        ctx = previousCtx;
+
+        return pageCanvas;
+    }
+
+    function downloadLetterPage(pageIndex, printScale, layout, pieceOffsetPx, pageCount) {
+        const pageCanvas = renderLetterPage(printScale, layout, pieceOffsetPx);
+        pageCanvas.toBlob((blob) => {
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `calendar-letter-page-${pageIndex + 1}-of-${pageCount}-${YEAR}.png`;
+            a.click();
+        }, "image/png");
+    }
+
+    function setUpLetterPageButtons() {
+        const layout = computeLayout(1);
+        const boxWidthPx = layout.cutGuideBorderRight - layout.cutGuideBorderLeft;
+        const boxHeightPx = layout.cutGuideBorderBottom - layout.cutGuideBorderTop;
+
+        const printScale = letterWidthPx / boxWidthPx;
+        const totalHeightPx = boxHeightPx * printScale;
+        const pageCount = Math.ceil(totalHeightPx / letterHeightPx);
+
+        const container = document.getElementById("letterPagesContainer");
+        container.textContent = "";
+
+        const label = document.createElement("span");
+        label.style.fontSize = "20px";
+        label.textContent = `Print-at-home (US Letter), 1 calendar split into ${pageCount} pages — click each, then glue in order: `;
+        container.appendChild(label);
+
+        for (let i = 0; i < pageCount; i++) {
+            const pieceOffsetPx = i * letterHeightPx;
+            const button = document.createElement("button");
+            button.textContent = `Page ${i + 1} of ${pageCount}`;
+            button.style.cssText = "font-size: 20px; padding: 12px 20px; margin: 8px;";
+            button.addEventListener("click", () => downloadLetterPage(i, printScale, layout, pieceOffsetPx, pageCount));
+            container.appendChild(button);
+        }
+    }
+
+    setUpLetterPageButtons();
 
 </script>
 
